@@ -1,11 +1,8 @@
-# crypto/kyber_utils.py
-
 import os
 import oqs
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
 # Define the Key Encapsulation Mechanism (KEM) to use.
-# Other options: 'Kyber768', 'Kyber1024'
 KEM_ALGORITHM = "Kyber512"
 
 def generate_keys():
