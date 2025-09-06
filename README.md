@@ -1,15 +1,3 @@
-Of course\! Here is a professionally formatted and enhanced version of your text, tailored for a GitHub README. It removes all citation markers, improves readability, and adds structural elements for clarity.
-
----
-
-# Quantum-Resistant Blockchain Protocol
-
-\<p align="center"\>
-\<img src="[https://img.shields.io/badge/Language-Python-blue.svg](https://www.google.com/search?q=https://img.shields.io/badge/Language-Python-blue.svg)" alt="Language"\>
-\<img src="[https://img.shields.io/badge/NIST%20PQC-CRYSTALS%20Suite-brightgreen.svg](https://www.google.com/search?q=https://img.shields.io/badge/NIST%2520PQC-CRYSTALS%2520Suite-brightgreen.svg)" alt="NIST PQC"\>
-\<img src="[https://img.shields.io/badge/Consensus-DPoL-orange.svg](https://www.google.com/search?q=https://img.shields.io/badge/Consensus-DPoL-orange.svg)" alt="Consensus"\>
-\<img src="[https://img.shields.io/badge/License-MIT-lightgrey.svg](https://www.google.com/search?q=https://img.shields.io/badge/License-MIT-lightgrey.svg)" alt="License"\>
-\</p\>
 
 A project by **Vignesh.M** and **Vijay.R.S**. This repository contains the implementation of a public blockchain protocol designed from the ground up with native post-quantum cryptographic primitives to ensure secure, end-to-end encrypted messaging.
 

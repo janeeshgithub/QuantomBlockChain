@@ -1,0 +1,43 @@
+@import "tailwindcss";
+body {
+  font-family: "Satoshi", "Poppins", sans-serif;
+  background: linear-gradient(to right, #4e001f, #12014d);
+}
+
+@font-face {
+  font-family: "Satoshi";
+  src: url("/fonts/Satoshi-Regular.woff2") format("woff2"),
+    url("/fonts/Satoshi-Regular.woff") format("woff");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Tailwind-like utility classes (if not extended in config) */
+.font-satoshi {
+  font-family: "Satoshi", sans-serif;
+}
+
+html,
+body {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+}
+
+html::-webkit-scrollbar,
+body::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
+}
+
+.perspective {
+  perspective: 1000px;
+}
+
+.transform-style {
+  transform-style: preserve-3d;
+  position: relative;
+}
+
+.backface-hidden {
+  backface-visibility: hidden;
+}
