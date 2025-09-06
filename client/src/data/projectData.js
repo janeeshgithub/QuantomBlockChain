@@ -1,10 +1,10 @@
 export const projectData = {
   heroSubtitle: "A Project Showcase",
-  heroTitle: "A Quantum-Resistant Communication Protocol Using Blockchain",
+  heroTitle: "A Quantum-Resistant Communication System Using Blockchain",
   heroDescription:
-    "Securing the next generation of digital communication against quantum threats with a decentralized, end-to-end encrypted protocol.",
+    "Securing the next generation of digital communication against quantum threats with a decentralized, end-to-end encrypted System.",
   abstract:
-    "The project proposes a quantum-resistant communication protocol built on a public blockchain. It aims to provide secure, end-to-end encrypted messaging for the quantum era. The core concept treats every message as a fully authenticated and encrypted transaction. The protocol uses NIST-standardized Post-Quantum Cryptography (PQC) to protect against both classical and quantum threats, ensuring privacy and integrity on a scalable platform.",
+    "The project proposes a quantum-resistant communication System built on a public blockchain. It aims to provide secure, end-to-end encrypted messaging for the quantum era. The core concept treats every message as a fully authenticated and encrypted transaction. The System uses NIST-standardized Post-Quantum Cryptography (PQC) to protect against both classical and quantum threats, ensuring privacy and integrity on a scalable platform.",
   technicalApproach: [
     {
       title: "Language & Prototyping",
@@ -88,7 +88,7 @@ export const projectData = {
       title: "Immediate Next Steps",
       list: [
         "<strong>Performance Evaluation:</strong> Deploy the prototype in a simulated network to measure TPS, latency, and data overhead.",
-        "<strong>Security Analysis:</strong> Conduct a rigorous theoretical review and protocol-level threat modeling.",
+        "<strong>Security Analysis:</strong> Conduct a rigorous theoretical review and System-level threat modeling.",
       ],
     },
     {

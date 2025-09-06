@@ -15,7 +15,6 @@ function App() {
           <Routes>
             <Route path="/" element={<HomePage />} />
             <Route path="/blockchains" element={<BlockchainsPage />} />
-
             <Route path="/idea" element={<Idea />} />
             <Route path="/flow" element={<Flow />} />
           </Routes>

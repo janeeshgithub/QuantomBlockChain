@@ -1,5 +1,4 @@
-
-A project by **Vignesh.M** and **Vijay.R.S**. This repository contains the implementation of a public blockchain protocol designed from the ground up with native post-quantum cryptographic primitives to ensure secure, end-to-end encrypted messaging.
+A project by **Vignesh.M** and **Vijay.R.S**. This repository contains the implementation of a public blockchain System designed from the ground up with native post-quantum cryptographic primitives to ensure secure, end-to-end encrypted messaging.
 
 ## 📜 Table of Contents
 
@@ -22,7 +21,7 @@ A project by **Vignesh.M** and **Vijay.R.S**. This repository contains the imple
 
 Current blockchain-based communication platforms depend on cryptographic algorithms like RSA and ECDSA, which are vulnerable to attacks from quantum computers. The development of quantum computing creates a significant risk of message theft, forgeries, and the loss of communication privacy.
 
-There is an urgent need for a real-world, scalable, and user-friendly public blockchain protocol that ensures secure, end-to-end encrypted messaging in the post-quantum era.
+There is an urgent need for a real-world, scalable, and user-friendly public blockchain System that ensures secure, end-to-end encrypted messaging in the post-quantum era.
 
 ## 🚀 Motivation
 
@@ -57,7 +56,7 @@ The network uses a novel **Delegated Proof of Luck (DPoL)** consensus mechanism.
 
 ## 📊 System Architecture Diagram
 
-_(A block diagram illustrating the protocol's architecture would go here.)_
+_(A block diagram illustrating the System's architecture would go here.)_
 
 ```
 [ Placeholder for path/to/your/block_diagram.png ]
@@ -65,7 +64,7 @@ _(A block diagram illustrating the protocol's architecture would go here.)_
 
 ## 📈 Evaluation Plan
 
-The protocol will be rigorously evaluated for both performance and security.
+The System will be rigorously evaluated for both performance and security.
 
 #### Performance Metrics
 
@@ -80,7 +79,7 @@ A prototype will be deployed in a simulated network to measure key metrics:
 A theoretical analysis will be conducted to validate security claims:
 
 - **Cryptographic Primitive Review:** Verify that `CRYSTALS-Kyber` and `CRYSTALS-Dilithium` are implemented according to NIST specifications.
-- **Protocol-Level Threat Modeling:** Analyze the protocol and the DPoL consensus mechanism against known threats like Shor's and Grover's algorithms, as well as network-level attacks.
+- **System-Level Threat Modeling:** Analyze the System and the DPoL consensus mechanism against known threats like Shor's and Grover's algorithms, as well as network-level attacks.
 
 ## 💻 Getting Started
 
