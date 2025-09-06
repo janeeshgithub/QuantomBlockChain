@@ -4,13 +4,11 @@ import json
 import sys
 import os
 
-# --- This part is to make the script runnable from the consensus directory ---
-# It adds the parent directory (your project's root) to the Python path
-# so we can import modules from the 'core' directory.
+# --- This part allows the script to import from the 'core' directory ---
 script_dir = os.path.dirname(__file__)
 parent_dir = os.path.join(script_dir, '..')
 sys.path.append(parent_dir)
-# --------------------------------------------------------------------------
+# ----------------------------------------------------------------------
 
 from core.block import Block
 from core.wallet import Wallet
@@ -82,7 +80,6 @@ class DPoLConsensus:
         
         delegates = sorted_addresses[:self.num_delegates]
         print(f"--- Election Complete. Primary Delegate: {delegates[0][:10]}...")
-        # print(f"Full Delegate Committee: {delegates}")
         return delegates
 
     def create_new_block(self, delegates: list[str], pending_transactions: list, last_block: Block) -> Block:
@@ -105,7 +102,6 @@ class DPoLConsensus:
         print(f"\nPrimary Delegate '{primary_delegate_address[:10]}...' is proposing a new block...")
 
         # The primary delegate creates the block
-        # *** CORRECTED to include index and proposer_address ***
         proposed_block = Block(
             index=last_block.index + 1,
             transactions=pending_transactions,
@@ -120,44 +116,5 @@ class DPoLConsensus:
         required_votes = (2 * num_votes // 3) + 1
         print(f"Simulating PBFT: requires {required_votes} of {num_votes} votes. Consensus reached!")
         
-        return proposed_block
-
-# --- Example of How to Use and Test This Module ---
-
-if __name__ == '__main__':
-    print("--- Running DPoL Consensus Simulation ---")
+        return proposed_block 
     
-    # 1. SETUP: Create a dummy network and blockchain state
-    NODE_COUNT = 50
-    network_wallets = [Wallet() for i in range(NODE_COUNT)]
-    
-    # Use the genesis block as the last known block
-    genesis_block = Block(index=0, transactions=[], previous_hash="0", proposer_address="genesis")
-    print(f"Starting with last block hash: {genesis_block.hash}")
-
-    # Create some dummy pending transactions
-    pending_txs = [{"data": {"from": "Alice", "to": "Bob"}, "signature": "..."}]
-
-    # 2. INITIALIZE the consensus mechanism
-    consensus_protocol = DPoLConsensus(nodes=network_wallets, num_delegates=21)
-
-    # 3. RUN one full consensus round
-    
-    # a. Select delegates for this round
-    delegates = consensus_protocol.select_delegates(genesis_block.hash)
-    
-    # b. Propose and validate a new block using the selected delegates
-    new_block = consensus_protocol.create_new_block(
-        delegates=delegates,
-        pending_transactions=pending_txs,
-        last_block=genesis_block,
-    )
-
-    # 4. REVIEW the result
-    if new_block:
-        print("\n--- Consensus Successful: New Block Ready to be Added ---")
-        print(f" - Index: {new_block.index}")
-        print(f" - Hash: {new_block.hash}")
-        print(f" - Proposer: {new_block.proposer_address[:10]}...")
-        print(f" - Previous Hash: {new_block.previous_hash}")
-        print(f" - Transactions included: {len(new_block.transactions)}")
