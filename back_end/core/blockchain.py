@@ -1,93 +1,68 @@
-import json
-from urllib.parse import urlparse
-import requests
-from time import time
-from .block import Block
-from .transaction import Transaction
+# core/blockchain.py
+
+from core.block import Block
+from crypto import dilithium_utils
 
 class Blockchain:
-	def __init__(self, crypto_suite):
-		self.current_transactions = []
-		self.chain = []
-		self.nodes = set()
-		self.crypto = crypto_suite
-		self.new_block(previous_hash='1', proof=100)
+    def __init__(self):
+        self.chain = [self.create_genesis_block()]
+        self.pending_transactions = []
 
-	def register_node(self, address):
-		parsed_url = urlparse(address)
-		if parsed_url.netloc:
-			self.nodes.add(parsed_url.netloc)
-		elif parsed_url.path:
-			self.nodes.add(parsed_url.path)
-		else:
-			raise ValueError('Invalid URL')
+    def create_genesis_block(self) -> Block:
+        """Creates the very first block in the chain."""
+        return Block(index=0, transactions=[], previous_hash="0", proposer_address="genesis")
 
-	def valid_chain(self, chain):
-		last_block = chain[0]
-		current_index = 1
-		while current_index < len(chain):
-			block = chain[current_index]
-			if block['previous_hash'] != self.hash(last_block):
-				return False
-			if not self.valid_proof(last_block['proof'], block['proof'], block['previous_hash']):
-				return False
-			last_block = block
-			current_index += 1
-		return True
+    @property
+    def last_block(self) -> Block:
+        """Returns the most recent block in the chain."""
+        return self.chain[-1]
 
-	def resolve_conflicts(self):
-		neighbours = self.nodes
-		new_chain = None
-		max_length = len(self.chain)
-		for node in neighbours:
-			try:
-				response = requests.get(f'http://{node}/chain')
-				if response.status_code == 200:
-					length = response.json()['length']
-					chain = response.json()['chain']
-					if length > max_length and self.valid_chain(chain):
-						max_length = length
-						new_chain = chain
-			except requests.exceptions.ConnectionError:
-				continue
-		if new_chain:
-			self.chain = new_chain
-			return True
-		return False
+    def add_transaction(self, transaction_dict: dict, signature_hex: str) -> bool:
+        """
+        Verifies and adds a transaction to the list of pending transactions.
+        """
+        # 1. Get the sender's public key (address) to verify the signature
+        sender_address_hex = transaction_dict['sender_address']
+        public_key = bytes.fromhex(sender_address_hex)
+        signature = bytes.fromhex(signature_hex)
+        
+        # 2. Verify the signature
+        is_valid = dilithium_utils.verify_signature(public_key, transaction_dict, signature)
+        
+        if not is_valid:
+            print(f"Transaction from {sender_address_hex} has an invalid signature. Discarding.")
+            return False
+            
+        # 3. Add the signed transaction to the pending pool
+        signed_transaction = {
+            "data": transaction_dict,
+            "signature": signature_hex
+        }
+        self.pending_transactions.append(signed_transaction)
+        print(f"Transaction from {sender_address_hex} added to pending pool.")
+        return True
 
-	def new_block(self, proof, previous_hash):
-		block = Block(
-			index=len(self.chain) + 1,
-			transactions=self.current_transactions,
-			proof=proof,
-			previous_hash=previous_hash or self.hash(self.chain[-1]),
-		)
-		self.current_transactions = []
-		self.chain.append(block.to_dict())
-		return block.to_dict()
+    def mine_block(self, proposer_address: str) -> Block:
+        """
+        Creates a new block from pending transactions and adds it to the chain.
+        In a real system, the proposer would be chosen by the consensus algorithm (dPoL).
+        """
+        if not self.pending_transactions:
+            print("No pending transactions to mine.")
+            return None
 
-	def new_transaction(self, sender, recipient, amount):
-		transaction = Transaction(sender, recipient, amount)
-		self.current_transactions.append(transaction.to_dict())
-		return self.last_block['index'] + 1
+        new_block = Block(
+            index=len(self.chain),
+            transactions=self.pending_transactions,
+            previous_hash=self.last_block.hash,
+            proposer_address=proposer_address
+        )
 
-	@property
-	def last_block(self):
-		return self.chain[-1]
-
-	def hash(self, block):
-		block_string = json.dumps(block, sort_keys=True)
-		return self.crypto.hash(block_string)
-
-	def proof_of_work(self, last_block):
-		last_proof = last_block['proof']
-		previous_hash = self.hash(last_block)
-		proof = 0
-		while self.valid_proof(last_proof, proof, previous_hash) is False:
-			proof += 1
-		return proof
-
-	def valid_proof(self, last_proof, proof, previous_hash):
-		guess = f'{last_proof}{proof}{previous_hash}'
-		guess_hash = self.crypto.hash(guess)
-		return guess_hash[:4] == "0000"
+        # In a real network, this block would be broadcast for validation
+        self.chain.append(new_block)
+        
+        # Clear the pending transactions pool
+        self.pending_transactions = []
+        
+        print(f"Block #{new_block.index} mined by {proposer_address} and added to the chain.")
+        return new_block
