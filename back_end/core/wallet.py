@@ -31,3 +31,33 @@ class Wallet:
         signature = dilithium_utils.sign(self.signing_secret_key, tx_bytes)
         
         return signature
+    
+    def decrypt_message(self, encrypted_content: dict) -> str | None:
+        """
+        Decrypts a message using the wallet's Kyber secret key.
+
+        Args:
+            encrypted_content (dict): A dictionary containing 'ciphertext','nonce', and 'payload' as hex strings.
+
+        Returns:
+            str: The decrypted message, or None if decryption fails.
+        """
+        try:
+            # 1. Convert the hex strings from the transaction back into bytes
+            ciphertext_bytes = bytes.fromhex(encrypted_content['ciphertext'])
+            nonce_bytes = bytes.fromhex(encrypted_content['nonce'])
+            payload_bytes = bytes.fromhex(encrypted_content['payload'])
+
+            # 2. Use our secret key to "decapsulate" the ciphertext and get the shared secret
+            shared_secret = kyber_utils.decapsulate_key(self.encryption_secret_key, ciphertext_bytes)
+
+            # 3. Use the shared secret to decrypt the main payload
+            decrypted_message_bytes = kyber_utils.decrypt_message(shared_secret, nonce_bytes, payload_bytes)
+            
+            # 4. Decode the decrypted bytes back into a human-readable string
+            return decrypted_message_bytes
+
+        except (KeyError, ValueError, Exception) as e:
+            # Catch errors from missing keys, bad hex, or a failed decryption
+            print(f"Decryption failed: {e}")
+            return None

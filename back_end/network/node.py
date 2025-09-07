@@ -7,6 +7,8 @@ import sys
 import os
 import random
 import time
+from datetime import datetime
+
 
 # --- Add project root to the path for imports ---
 script_dir = os.path.dirname(__file__)
@@ -299,14 +301,44 @@ async def main(args):
 
     while True:
         try:
-            # --- NEW: Added 'ping' to the list of commands ---
-            cmd = await asyncio.to_thread(input, "\nCommands: ping, register_key, send_msg, mempool, mine, peers, chain, exit\n> ")
+            # --- NEW: Added 'read_msgs' to the list of commands ---
+            cmd = await asyncio.to_thread(input, "\nCommands: read_msgs, register_key, send_msg, mempool, mine, peers, chain, exit\n> ")
             
-            # --- NEW: ping command ---
-            if cmd == 'ping':
-                ping_message = node.create_message("PING", {"time": time.time()})
-                await node.broadcast(ping_message)
-            
+            # --- NEW: read_msgs command ---
+            if cmd == 'read_msgs':
+                print("\n--- Checking blockchain for your messages ---")
+                my_address = node.node_wallet.address
+                messages_found = 0
+                
+                # Iterate through every block in the chain
+                for block in node.blockchain.chain:
+                    # Iterate through every transaction in the block
+                    for signed_tx in block.transactions:
+                        tx = signed_tx['transaction_dict']
+                        
+                        # Check if the transaction is a 'message' and if it's addressed to us
+                        if tx.get('tx_type') == 'message' and tx.get('recipient_address') == my_address:
+                            encrypted_content = tx.get('content')
+                            
+                            # Use our wallet to try and decrypt the content
+                            decrypted_message = node.node_wallet.decrypt_message(encrypted_content)
+                            
+                            if decrypted_message:
+                                messages_found += 1
+                                sender = tx.get('sender_address')
+                                timestamp = tx.get('timestamp')
+                                time_formatted = datetime.fromtimestamp(timestamp).strftime('%Y-%m-%d %H:%M:%S')
+
+                                print(f"\nMessage #{messages_found}:")
+                                print(f"  From:      {sender[:12]}...")
+                                print(f"  At:        {time_formatted}")
+                                print(f"  Message:   '{decrypted_message}'")
+                            else:
+                                print(f"Found a message from {tx.get('sender_address')[:12]} but FAILED to decrypt.")
+
+                if messages_found == 0:
+                    print("No messages found for you on the blockchain.")
+
             # (The rest of the commands like register_key, send_msg, etc. remain the same)
             elif cmd == 'register_key':
                 tx_obj = Transaction(sender_wallet=node.node_wallet, message="", tx_type="key_registration")
