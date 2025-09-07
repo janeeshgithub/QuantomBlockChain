@@ -1,27 +1,23 @@
-import { BrowserRouter as Router, Routes, Route, Link } from "react-router-dom";
-import { motion } from "framer-motion";
-import { Home, Blocks } from "lucide-react"; // icons
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import Navbar from "./components/Navbar";
 import HomePage from "./pages/Home";
 import BlockchainsPage from "./pages/Block";
-import Navbar from "./components/Navbar";
-import Idea from "./pages/Idea";
-import Flow from "./pages/Flow";
+import Chat from "./pages/Chat";
+
 function App() {
   return (
-    <>
-      <Router>
+    <Router>
+      <div className="min-h-screen bg-gray-50 text-gray-900">
         <Navbar />
-        <div className="min-h-screen bg-gray-50 text-gray-900">
+        {/* Add padding so content doesn't stick under the navbar */}
+        <main>
           <Routes>
             <Route path="/" element={<HomePage />} />
-            <Route path="/blockchains" element={<BlockchainsPage />} />
-            <Route path="/idea" element={<Idea />} />
-            <Route path="/flow" element={<Flow />} />
             <Route path="/chat" element={<Chat />} />
           </Routes>
-        </div>
-      </Router>
-    </>
+        </main>
+      </div>
+    </Router>
   );
 }
 
