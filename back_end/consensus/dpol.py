@@ -45,11 +45,12 @@ class DPoLConsensus:
     def _simulate_ivrf_verification(self, proof: bool) -> bool:
         """
         *** SIMULATION of iVRF Verification ***
-        In a real system, this would verify the proof using the node's public key.
         """
         return proof
 
     # In consensus/dpol.py, replace the entire select_delegates function
+
+    # In consensus/dpol.py
 
     def select_delegates(self, previous_block_hash: str) -> list[str]:
         """
@@ -58,33 +59,18 @@ class DPoLConsensus:
         print("\n--- Starting Delegate Election ---")
         node_scores = {}
 
-        # 1. All nodes generate their VRF values
-        for node in self.all_nodes:
-            random_value, proof = self._simulate_ivrf_generation(node.address, previous_block_hash)
+        # The list self.all_nodes will now be a list of address strings
+        for node_address in self.all_nodes:
+            # We now use node_address directly instead of node.address
+            random_value, proof = self._simulate_ivrf_generation(node_address, previous_block_hash)
             
-            # 2. Verify values and calculate scores
             if self._simulate_ivrf_verification(proof):
-                
-                # --- START DEBUGGING BLOCK ---
                 try:
-                    # Print the values we are about to use
-                    print(f"DEBUG: prev_hash type: {type(previous_block_hash)}, value: {previous_block_hash[:10]}...")
-                    print(f"DEBUG: random_value type: {type(random_value)}, value: {random_value[:10]}...")
-
-                    # This is the line that is likely failing
                     score = abs(int(previous_block_hash, 16) - int(random_value, 16))
-                    node_scores[node.address] = score
-
+                    node_scores[node_address] = score
                 except (ValueError, TypeError) as e:
-                    # If the int() conversion fails, this will catch it and tell us why
-                    print(f"\n--- DEBUG ERROR ---")
-                    print(f"Failed to calculate score for node {node.address[:10]}...")
-                    print(f"Error was: {e}")
-                    print(f"The 'previous_block_hash' that caused the error was: {previous_block_hash}")
-                    print(f"--- END DEBUG ERROR ---\n")
-                # --- END DEBUGGING BLOCK ---
-        
-        # 3. Sort nodes by score
+                    print(f"DEBUG ERROR: Could not calculate score. Error: {e}")
+
         if not node_scores:
             print("Error: No scores were calculated. Cannot select delegates.")
             return []
@@ -93,7 +79,7 @@ class DPoLConsensus:
         
         delegates = sorted_addresses[:self.num_delegates]
         if not delegates:
-            print("Error: No delegates could be selected from scores.")
+            print("Error: No delegates could be selected.")
             return []
 
         print(f"--- Election Complete. Primary Delegate: {delegates[0][:10]}...")
