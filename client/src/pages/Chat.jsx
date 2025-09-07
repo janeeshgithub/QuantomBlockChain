@@ -1,6 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
 
-// --- SVG Icons ---
 const SendIcon = ({ className }) => (
   <svg
     className={className}
@@ -12,9 +11,8 @@ const SendIcon = ({ className }) => (
   </svg>
 );
 
-// --- Initial Data ---
 const initialChats = {
-  "1": {
+  1: {
     name: "Alice",
     avatar: "https://placehold.co/80x80/A0AEC0/FFFFFF?text=A",
     messages: [
@@ -26,13 +24,13 @@ const initialChats = {
       },
       {
         id: 2,
-        text: "It's going great! Making good progress on the quantum resistance layer.",
+        text: "It's going great! Making good progress.",
         sender: "You",
         timestamp: "10:01 AM",
       },
     ],
   },
-  "2": {
+  2: {
     name: "Bob",
     avatar: "https://placehold.co/80x80/F6AD55/FFFFFF?text=B",
     messages: [
@@ -44,7 +42,7 @@ const initialChats = {
       },
       {
         id: 2,
-        text: "Yeah, pretty volatile. But our long-term vision is solid.",
+        text: "Yeah, pretty volatile.",
         sender: "You",
         timestamp: "Yesterday",
       },
@@ -117,30 +115,30 @@ export default function ChatApp() {
 
   return (
     <div className="bg-gray-900 text-gray-100 h-screen flex items-center justify-center p-4">
-      <div className="w-full max-w-4xl h-[80vh] bg-gray-800 rounded-2xl shadow-2xl flex overflow-hidden">
-        {/* Sidebar */}
+      <div className="w-full max-w-3xl h-[80vh] bg-gray-800 rounded-2xl shadow-2xl flex flex-col">
+        {/* If no active chat → Show Users List */}
         {!activeChat && (
           <div className="flex flex-col w-full p-6">
-            <h1 className="text-3xl font-bold text-sky-400 mb-4 text-center">
-              Chat Dashboard
+            <h1 className="text-3xl font-bold text-sky-400 mb-6 text-center">
+              Users
             </h1>
-            <div className="overflow-y-auto flex-grow">
+            <div className="overflow-y-auto flex-grow space-y-4">
               {Object.entries(chats).map(([id, chat]) => {
                 const lastMessage = chat.messages[chat.messages.length - 1];
                 return (
                   <div
                     key={id}
                     onClick={() => setActiveChatId(id)}
-                    className="flex items-center p-4 rounded-xl hover:bg-gray-700 transition-all mb-3 cursor-pointer"
+                    className="flex items-center p-4 bg-gray-700 hover:bg-gray-600 rounded-xl cursor-pointer transition-all"
                   >
                     <img
                       src={chat.avatar}
                       alt={chat.name}
-                      className="w-12 h-12 rounded-full mr-4"
+                      className="w-14 h-14 rounded-full mr-4"
                     />
-                    <div>
+                    <div className="flex flex-col">
                       <h2 className="font-semibold text-lg">{chat.name}</h2>
-                      <p className="text-gray-400 truncate max-w-[200px]">
+                      <p className="text-gray-400 text-sm truncate max-w-[200px]">
                         {lastMessage?.text}
                       </p>
                     </div>
@@ -151,24 +149,26 @@ export default function ChatApp() {
           </div>
         )}
 
-        {/* Chat Window */}
+        {/* If active chat → Show Chat Window */}
         {activeChat && (
-          <div className="flex flex-col w-full md:w-3/4 bg-gray-900 rounded-xl overflow-hidden">
-            <header className="flex items-center p-4 border-b border-gray-700 bg-gray-800">
+          <div className="flex flex-col flex-grow">
+            {/* Header */}
+            <header className="flex items-center p-4 bg-gray-800 border-b border-gray-700">
               <button
                 onClick={() => setActiveChatId(null)}
-                className="mr-4 text-sky-400 hover:text-sky-300"
+                className="mr-4 text-sky-400 hover:text-sky-300 text-lg"
               >
                 ← Back
               </button>
               <img
                 src={activeChat.avatar}
                 alt={activeChat.name}
-                className="w-10 h-10 rounded-full mr-4"
+                className="w-10 h-10 rounded-full mr-3"
               />
               <h2 className="font-semibold text-lg">{activeChat.name}</h2>
             </header>
 
+            {/* Messages */}
             <main className="flex-grow p-4 overflow-y-auto space-y-3">
               {activeChat.messages.map((msg) => (
                 <div
@@ -194,6 +194,7 @@ export default function ChatApp() {
               <div ref={messageEndRef} />
             </main>
 
+            {/* Input */}
             <footer className="p-4 bg-gray-800 border-t border-gray-700">
               <form onSubmit={handleSendMessage} className="flex space-x-3">
                 <input

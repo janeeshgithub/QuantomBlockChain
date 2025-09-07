@@ -1,21 +1,3 @@
-A project by **Vignesh.M** and **Vijay.R.S**. This repository contains the implementation of a public blockchain System designed from the ground up with native post-quantum cryptographic primitives to ensure secure, end-to-end encrypted messaging.
-
-## 📜 Table of Contents
-
-- [The Problem](https://www.google.com/search?q=%23-the-problem)
-- [Motivation](https://www.google.com/search?q=%23-motivation)
-- [Key Features](https://www.google.com/search?q=%23-key-features)
-- [Technical Architecture](https://www.google.com/search?q=%23%EF%B8%8F-technical-architecture)
-  - [Core Cryptography](https://www.google.com/search?q=%23core-cryptography)
-  - [Consensus: Delegated Proof of Luck (DPoL)](https://www.google.com/search?q=%23consensus-delegated-proof-of-luck-dpol)
-- [System Architecture Diagram](https://www.google.com/search?q=%23-system-architecture-diagram)
-- [Evaluation Plan](https://www.google.com/search?q=%23-evaluation-plan)
-  - [Performance Metrics](https://www.google.com/search?q=%23performance-metrics)
-  - [Security Analysis](https://www.google.com/search?q=%23security-analysis)
-- [Getting Started](https://www.google.com/search?q=%23-getting-started)
-  - [Running the Nodes](https://www.google.com/search?q=%23running-the-nodes)
-  - [Sending a Transaction](https://www.google.com/search?q=%23sending-a-transaction)
-- [References](https://www.google.com/search?q=%23-references)
 
 ## 🎯 The Problem
 
@@ -81,61 +63,7 @@ A theoretical analysis will be conducted to validate security claims:
 - **Cryptographic Primitive Review:** Verify that `CRYSTALS-Kyber` and `CRYSTALS-Dilithium` are implemented according to NIST specifications.
 - **System-Level Threat Modeling:** Analyze the System and the DPoL consensus mechanism against known threats like Shor's and Grover's algorithms, as well as network-level attacks.
 
-## 💻 Getting Started
 
-Here is a sample walkthrough for running the nodes and submitting transactions.
-
-### Running the Nodes
-
-First, start each node in a separate terminal window using its configuration file.
-
-**Terminal 1: Start Node 1**
-
-```bash
-# Activate your Python virtual environment
-source venv/bin/activate
-
-# Start the first node
-python node.py config_node1.json
-```
-
-You will see output indicating the server is running and may see initial connection errors as it looks for peers.
-
-**Terminal 2: Start Node 2**
-
-```bash
-# Activate your Python virtual environment
-source venv/bin/activate
-
-# Start the second node
-python node.py config_node2.json
-```
-
-Once Node 2 starts, it will connect to Node 1, and you will see a `Connected to peer` message.
-
-### Sending a Transaction
-
-Use the `send_tx.py` script to create and broadcast a new transaction to the network.
-
-```bash
-# Activate your Python virtual environment
-source venv/bin/activate
-
-# Install dependencies if you haven't already
-pip install requests
-
-# Send a transaction from Alice to Bob
-python send_tx.py Alice Bob "This is a quantum-resistant message!"
-```
-
-**Successful Output:**
-
-```json
-{
-  "message": "Transaction submitted",
-  "tx_hash": "6235747aeaf391c0d7fc3990dd5592b3be01c07cef5b000f12ea54ad62fb81c9"
-}
-```
 
 ## 📚 References
 

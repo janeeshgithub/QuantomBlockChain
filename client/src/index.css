@@ -1,7 +1,7 @@
 @import "tailwindcss";
 body {
   font-family: "Satoshi", "Poppins", sans-serif;
-  background: linear-gradient(to right, #4e001f, #12014d);
+  background: linear-gradient(to right, #4e001f, #9489bd);
 }
 
 @font-face {
