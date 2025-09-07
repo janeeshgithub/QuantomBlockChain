@@ -17,6 +17,7 @@ function App() {
             <Route path="/blockchains" element={<BlockchainsPage />} />
             <Route path="/idea" element={<Idea />} />
             <Route path="/flow" element={<Flow />} />
+            <Route path="/chat" element={<Chat />} />
           </Routes>
         </div>
       </Router>
