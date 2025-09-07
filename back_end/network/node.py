@@ -1,3 +1,5 @@
+# network/node.py
+
 import asyncio
 import json
 import uuid
@@ -5,57 +7,56 @@ import logging
 import argparse
 import sys
 import os
-import random
 import time
 from datetime import datetime
 
-
 # --- Add project root to the path for imports ---
+# This allows the script to find the 'core', 'consensus', and 'crypto' folders
 script_dir = os.path.dirname(__file__)
-
 parent_dir = os.path.join(script_dir, '..')
-
 sys.path.append(parent_dir)
 
 # --- Your Core Blockchain Imports ---
 from core.block import Block
 from core.blockchain import Blockchain
 from core.wallet import Wallet
+from core.public_ledger import PublicKeyLedger
 from consensus.dpol import DPoLConsensus
 from core.transaction import Transaction
 
-
 # --- Basic Logging Setup ---
+# Configures a logger to print timestamped informational messages to the console.
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 
+# In network/node.py
+
+# In network/node.py
+
 class P2PNode:
-    def __init__(self, host, port, node_wallet, blockchain, consensus):
+    """
+    Manages all peer-to-peer network operations for a single blockchain node.
+    """
+    def __init__(self, host: str, port: int, node_wallet: Wallet, blockchain: Blockchain, consensus: DPoLConsensus, ledger: PublicKeyLedger):
         self.host = host
         self.port = port
         self.node_wallet = node_wallet
         self.blockchain = blockchain
         self.consensus = consensus
+        self.ledger = ledger
         
-        # Peers dict now stores: peer_addr -> (reader, writer, peer_wallet_address)
-        self.peers = {}  
+        # --- UPDATED: The dictionary now maps peer_addr -> (reader, writer, address_string) ---
+        self.peers = {}
+        
         self.server = None
         self.seen_messages = set()
 
-    def create_message(self, msg_type, payload=None):
-        """Helper to create a standardized message dictionary."""
-        return {
-            "id": str(uuid.uuid4()),
-            "type": msg_type,
-            "payload": payload or {}
-        }
+    def create_message(self, msg_type: str, payload: dict = None) -> dict:
+        return {"id": str(uuid.uuid4()), "type": msg_type, "payload": payload or {}}
 
     async def start(self):
-        """Starts the node's server and main loop."""
         try:
-            self.server = await asyncio.start_server(
-                self.handle_connection, self.host, self.port
-            )
+            self.server = await asyncio.start_server(self.handle_connection, self.host, self.port)
             logging.info(f"Node listening on {self.host}:{self.port}")
             logging.info(f"Node address: {self.node_wallet.address}")
             await self.server.serve_forever()
@@ -65,7 +66,6 @@ class P2PNode:
             await self.stop()
 
     async def stop(self):
-        """Gracefully stops the node."""
         if self.server:
             self.server.close()
             await self.server.wait_closed()
@@ -74,239 +74,159 @@ class P2PNode:
             await writer.wait_closed()
         self.peers.clear()
 
-    async def connect_to_peer(self, peer_host, peer_port):
-        """Initiates a connection, performs handshake, and requests the peer's chain."""
+    async def connect_to_peer(self, peer_host: str, peer_port: int):
         try:
             reader, writer = await asyncio.open_connection(peer_host, peer_port)
-            peer_addr = writer.get_extra_info('peername') # Use the confirmed address
-            
-            # --- THE FIX IS HERE ---
-            # Immediately add the new peer to our dictionary.
-            # We don't know their wallet address yet, so we'll store None for now.
-            # The HANDSHAKE message from them will fill this in later.
+            peer_addr = writer.get_extra_info('peername')
             self.peers[peer_addr] = (reader, writer, None)
             logging.info(f"Successfully connected to peer {peer_addr}")
-            # --- END FIX ---
-            
-            # Send our identity in a handshake
             handshake_msg = self.create_message("HANDSHAKE", {"address": self.node_wallet.address})
             await self.send_message(writer, handshake_msg)
-
-            # Request the peer's chain to sync up
             get_chain_msg = self.create_message("GET_CHAIN")
             await self.send_message(writer, get_chain_msg)
-            
-            # Start listening for messages from this new peer
             asyncio.create_task(self.handle_connection(reader, writer))
-            
-        except ConnectionRefusedError:
-            logging.warning(f"Connection refused by {peer_host}:{peer_port}")
         except Exception as e:
             logging.error(f"Failed to connect to {peer_host}:{peer_port}: {e}")
 
-
+    # --- UPDATED: This now works with address strings ---
     def update_consensus_nodes(self):
-        """Updates the consensus mechanism with the current list of Wallet objects."""
-        peer_wallets = [wallet for _, _, wallet in self.peers.values() if wallet]
-        all_wallets = peer_wallets + [self.node_wallet]
-        
-        # We create a dictionary to ensure uniqueness based on the wallet address
-        unique_wallets = {wallet.address: wallet for wallet in all_wallets}
-        
-        self.consensus.all_nodes = list(unique_wallets.values())
+        """Updates the consensus algorithm with the current list of known peer addresses."""
+        peer_addresses = [addr_str for _, _, addr_str in self.peers.values() if addr_str]
+        all_addresses = peer_addresses + [self.node_wallet.address]
+        self.consensus.all_nodes = list(set(all_addresses)) # Ensure uniqueness
         logging.info(f"Consensus nodes updated. Total unique nodes: {len(self.consensus.all_nodes)}")
 
     async def handle_connection(self, reader, writer):
-        """Handles all incoming data from a single connection."""
         peer_addr = writer.get_extra_info('peername')
-
         try:
+            self.peers[peer_addr] = (reader, writer, None) 
+            
+            logging.info(f"Accepted connection from {peer_addr}")
+
             while True:
                 len_data = await reader.readexactly(4)
                 msg_len = int.from_bytes(len_data, 'big')
                 msg_data = await reader.readexactly(msg_len)
                 message = json.loads(msg_data.decode())
-                
                 await self.handle_message(message, writer)
-
         except (asyncio.IncompleteReadError, ConnectionResetError):
             logging.warning(f"Peer {peer_addr} disconnected.")
-        except Exception as e:
-            logging.error(f"Error handling connection from {peer_addr}: {e}")
         finally:
             if peer_addr in self.peers:
                 del self.peers[peer_addr]
             self.update_consensus_nodes()
             writer.close()
             await writer.wait_closed()
-            logging.info(f"Connection with {peer_addr} closed.")
 
-    async def handle_message(self, message, writer):
-        """The main message router, now with chain resolution logic."""
-        msg_id, msg_type = message.get("id"), message.get("type")
+    # --- UPDATED: The HANDSHAKE handler is now much simpler and more robust ---
+    async def handle_message(self, message: dict, writer):
+        msg_type = message.get("type")
         originator_addr = writer.get_extra_info('peername')
-
-        if msg_id in self.seen_messages:
-            return
-        self.seen_messages.add(msg_id)
         
+        # Prevent infinite broadcast loops for most messages
+        if msg_type not in ["GET_CHAIN", "CHAIN_RESPONSE"]:
+            if message.get("id") in self.seen_messages:
+                return
+            self.seen_messages.add(message.get("id"))
+
         logging.info(f"Received '{msg_type}' from {originator_addr}")
 
-        if msg_type == "PING":
-            # Received a ping, send a pong right back to the sender
-            pong_message = self.create_message("PONG", message.get("payload"))
-            await self.send_message(writer, pong_message)
-            return # Stop processing here
-
-        elif msg_type == "PONG":
-            # Received a pong, log it
-            sent_time = message.get("payload", {}).get("time")
-            if sent_time:
-                rtt = (time.time() - sent_time) * 1000
-                logging.info(f"PONG received from {originator_addr}. Round-trip time: {rtt:.2f} ms")
-            return
-
+        if msg_type == "GET_CHAIN":
+            chain_data = [block.__dict__ for block in self.blockchain.chain]
+            response = self.create_message("CHAIN_RESPONSE", {"chain": chain_data})
+            await self.send_message(writer, response)
+        
+        elif msg_type == "CHAIN_RESPONSE":
+            chain_data = message.get("payload", {}).get("chain", [])
+            if self.blockchain.replace_chain(chain_data):
+                self.ledger.update_from_chain(self.blockchain)
+        
         elif msg_type == "HANDSHAKE":
             peer_wallet_address_hex = message.get("payload", {}).get("address")
             if peer_wallet_address_hex:
-                peer_wallet = Wallet()
-                try:
-                    peer_wallet.public_key = bytes.fromhex(peer_wallet_address_hex)
-                    self.peers[originator_addr] = (writer.get_extra_info('stream'), writer, peer_wallet)
-                    logging.info(f"Handshake complete. Peer {originator_addr} wallet loaded.")
-                    self.update_consensus_nodes()
-                except Exception as e:
-                    logging.error(f"Failed to load peer wallet from public key hex: {e}")
-            else:
-                logging.warning(f"Received invalid handshake from {originator_addr}")
-
+                # We just store the peer's address string, not a full Wallet object.
+                if originator_addr in self.peers:
+                    reader, writer, _ = self.peers[originator_addr]
+                    self.peers[originator_addr] = (reader, writer, peer_wallet_address_hex)
+                logging.info(f"Handshake complete. Peer {originator_addr} address loaded.")
+                self.update_consensus_nodes()
+        
         elif msg_type == "NEW_TRANSACTION":
-            values = message.get("payload")
-            success = self.blockchain.add_transaction(
-                values['transaction_dict'], values['signature_hex']
-            )
-            if success:
-                logging.info("Transaction valid. Added to mempool and broadcasting.")
+            if self.blockchain.add_transaction(message['payload']['transaction_dict'], message['payload']['signature_hex']):
                 await self.broadcast(message, originator_writer=writer)
-            else:
-                logging.warning("Received invalid transaction from peer. Rejected.")
 
         elif msg_type == "NEW_BLOCK":
             block_data = message.get("payload")
-            last_block = self.blockchain.last_block
-
-            # --- UPGRADED LOGIC ---
-            # 1. Standard case: The new block extends our current chain
-            if block_data['index'] == last_block.index + 1 and block_data['previous_hash'] == last_block.hash:
-                # We should still validate the block before appending
-                new_block = Block.from_dict(block_data)
-                if new_block.hash == new_block.calculate_hash(): # Basic validation
-                    self.blockchain.chain.append(new_block)
-                    self.blockchain.pending_transactions = []
-                    logging.info(f"✅ Appended new block #{block_data['index']} from peer.")
-                    await self.broadcast(message, originator_writer=writer)
-                else:
-                    logging.warning(f"❌ Received block #{block_data['index']} with invalid hash.")
-
-            # 2. Conflict case: The new block's index is the same as our last block, indicating a split
-            elif block_data['index'] == last_block.index:
-                logging.info(f"Chain split detected at index {last_block.index}. Querying peer for its full chain.")
-                 # We don't need to do anything here, the node that mines the *next* block will resolve this
-                pass
-
-            # 3. Catch-up case: We are behind
-            elif block_data['index'] > last_block.index:
-                logging.warning(f"We seem to be behind. Our index: {last_block.index}, Peer's index: {block_data['index']}.")
-                # This is a simplified catch-up. A real implementation would request the full chain.
-                # For now, we accept it if the previous hash matches our last block, assuming we just missed one block.
-                # A more robust implementation would be needed for larger gaps.
-                if block_data['previous_hash'] == last_block.hash:
-                    self.blockchain.chain.append(Block.from_dict(block_data))
-                    self.blockchain.pending_transactions = []
-                    logging.info(f"✅ Caught up by appending block #{block_data['index']}.")
+            new_block = Block.from_dict(block_data)
+            if new_block.index == self.blockchain.last_block.index + 1 and new_block.previous_hash == self.blockchain.last_block.hash:
+                self.blockchain.chain.append(new_block)
+                self.blockchain.pending_transactions = []
+                logging.info(f"✅ Appended new block #{new_block.index} from peer.")
+                self.ledger.update_from_chain(self.blockchain)
+                self.scan_block_for_messages(new_block)
+                await self.broadcast(message, originator_writer=writer)
+            elif new_block.index > self.blockchain.last_block.index:
+                logging.warning(f"Received block ahead of us. Requesting chain sync from {originator_addr}.")
+                get_chain_msg = self.create_message("GET_CHAIN")
+                await self.send_message(writer, get_chain_msg)
             else:
-                # The block is old and irrelevant
-                logging.info(f"Ignoring old block #{block_data.get('index')}.")
+                logging.info(f"Ignoring old or irrelevant block #{new_block.index}.")
+
+    def scan_block_for_messages(self, block: Block):
+        my_address = self.node_wallet.address
+        for signed_tx in block.transactions:
+            tx = signed_tx['transaction_dict']
+            if tx.get('tx_type') == 'message' and tx.get('recipient_address') == my_address:
+                logging.info("!!! You have a new message in this block !!!")
+                encrypted_content = tx.get('content')
+                decrypted_message = self.node_wallet.decrypt_message(encrypted_content)
+                if decrypted_message:
+                    sender_address = tx.get('sender_address')
+                    sender_name = self.ledger.get_user_for_address(sender_address) or f"{sender_address[:10]}..."
+                    print(f"\n[NEW MESSAGE] From: {sender_name}")
+                    print(f" > '{decrypted_message}'\n")
+                else:
+                    print("Found a message for you, but FAILED to decrypt.")
 
     async def send_message(self, writer, message):
-        """Encodes and sends a message to a specific writer with length-prefixing."""
         try:
-            msg_bytes = json.dumps(message).encode()
+            msg_bytes = json.dumps(message, default=str).encode()
             len_bytes = len(msg_bytes).to_bytes(4, 'big')
             writer.write(len_bytes + msg_bytes)
             await writer.drain()
         except ConnectionResetError:
-            pass # Cleanup is handled in the main connection loop
+            pass
 
-    async def broadcast(self, message, originator_writer=None):
-        """Sends a message to all connected peers except the originator."""
-        all_writers = [w for _, w, _ in self.peers.values()]
+    async def broadcast(self, message: dict, originator_writer=None):
+        all_writers = [w for _, w, _ in self.peers.values() if w is not originator_writer]
         for writer in all_writers:
-            if writer is not originator_writer:
-                await self.send_message(writer, message)
+            await self.send_message(writer, message)
 
-    async def trigger_consensus_and_mine(self):
-        """Replicates the logic of your /mine endpoint using the blockchain's own method."""
-        if not self.blockchain.pending_transactions:
-            logging.info('No pending transactions to create a block.')
-            return
-
-        logging.info("Triggering DPoL consensus to select a block proposer...")
-        delegates = self.consensus.select_delegates(self.blockchain.last_block.hash)
-        
-        if not delegates:
-            logging.error("Consensus failed to select delegates.")
-            return
-
-        primary_delegate_address = delegates[0]
-        if primary_delegate_address == self.node_wallet.address:
-            logging.info(f"✅ This node WON consensus and will create the block.")
-            
-            # Now we call your blockchain's own robust mine_block method.
-            new_block = self.blockchain.mine_block(
-                proposer_address=self.node_wallet.address
-            )
-            
-            if new_block:
-                # Broadcast the new block to the network
-                block_message = self.create_message("NEW_BLOCK", new_block.__dict__)
-                await self.broadcast(block_message)
-        else:
-            logging.info(f"Consensus complete. Block proposer is {primary_delegate_address[:10]}...")
-            logging.info("Waiting for the new block from the winner.")
 
 async def main(args):
     # (The setup part of this function remains the same)
     node_wallet = Wallet()
     blockchain = Blockchain()
     consensus = DPoLConsensus(nodes=[], num_delegates=5)
-    node = P2PNode(args.host, args.port, node_wallet, blockchain, consensus)
+    ledger = PublicKeyLedger()
+    ledger.update_from_chain(blockchain)
+
+    node = P2PNode(args.host, args.port, node_wallet, blockchain, consensus, ledger)
+    
     server_task = asyncio.create_task(node.start())
     await asyncio.sleep(1)
+
     if args.peers:
         for peer in args.peers.split(','):
-            try:
-                peer_host, peer_port = peer.split(':')
-                await node.connect_to_peer(peer_host, int(peer_port))
-            except ValueError:
-                logging.error(f"Invalid peer format: {peer}. Use HOST:PORT.")
-
-    def find_encryption_key(address):
-        for block in reversed(node.blockchain.chain):
-            for signed_tx in block.transactions:
-                tx = signed_tx['transaction_dict']
-                if tx.get('tx_type') == 'key_registration' and tx.get('sender_address') == address:
-                    return tx['content']['encryption_key']
-        return None
+            await node.connect_to_peer(peer.split(':')[0], int(peer.split(':')[1]))
 
     while True:
         try:
-            # --- NEW: Added 'read_msgs' to the list of commands ---
-            cmd = await asyncio.to_thread(input, "\nCommands: read_msgs, register_key, send_msg, mempool, mine, peers, chain, exit\n> ")
+            cmd = await asyncio.to_thread(input, "\nCommands: users, register_key <user>, send_msg <user> <msg>, read_msgs, mempool, mine, chain, exit\n> ")
             
-            # --- NEW: read_msgs command ---
+            # --- START OF CORRECTED BLOCK ---
             if cmd == 'read_msgs':
-                print("\n--- Checking blockchain for your messages ---")
+                print("\n--- Manually checking blockchain for your messages ---")
                 my_address = node.node_wallet.address
                 messages_found = 0
                 
@@ -325,61 +245,65 @@ async def main(args):
                             
                             if decrypted_message:
                                 messages_found += 1
-                                sender = tx.get('sender_address')
-                                timestamp = tx.get('timestamp')
-                                time_formatted = datetime.fromtimestamp(timestamp).strftime('%Y-%m-%d %H:%M:%S')
+                                sender_address = tx.get('sender_address')
+                                sender_name = ledger.get_user_for_address(sender_address) or f"{sender_address[:10]}..."
+                                time_formatted = datetime.fromtimestamp(tx.get('timestamp')).strftime('%Y-%m-%d %H:%M:%S')
 
                                 print(f"\nMessage #{messages_found}:")
-                                print(f"  From:      {sender[:12]}...")
+                                print(f"  From:      {sender_name}")
                                 print(f"  At:        {time_formatted}")
                                 print(f"  Message:   '{decrypted_message}'")
                             else:
                                 print(f"Found a message from {tx.get('sender_address')[:12]} but FAILED to decrypt.")
-
+                
+                # After checking all blocks, if we haven't found any messages, say so.
                 if messages_found == 0:
                     print("No messages found for you on the blockchain.")
+            # --- END OF CORRECTED BLOCK ---
 
-            # (The rest of the commands like register_key, send_msg, etc. remain the same)
-            elif cmd == 'register_key':
-                tx_obj = Transaction(sender_wallet=node.node_wallet, message="", tx_type="key_registration")
+            elif cmd == 'users':
+                print(f"Registered Users: {ledger.list_users()}")
+
+            elif cmd.startswith('register_key'):
+                parts = cmd.split()
+                if len(parts) < 2: print("Usage: register_key <username>"); continue
+                username = parts[1]
+                tx_obj = Transaction(sender_wallet=node.node_wallet, tx_type="key_registration", username=username, message="")
                 tx_dict = tx_obj.to_dict()
                 signature = node.node_wallet.sign_transaction(tx_dict)
                 payload = {'transaction_dict': tx_dict, 'signature_hex': signature.hex()}
                 if node.blockchain.add_transaction(tx_dict, signature.hex()):
                     tx_message = node.create_message("NEW_TRANSACTION", payload)
                     await node.broadcast(tx_message)
+
             elif cmd.startswith('send_msg'):
                 parts = cmd.split()
-                if len(parts) < 3:
-                    print("Usage: send_msg <recipient_address> <message>")
-                    continue
-                recipient_addr = parts[1]
-                message_text = " ".join(parts[2:])
-                recipient_enc_key = find_encryption_key(recipient_addr)
-                if not recipient_enc_key:
-                    print("Could not find recipient's encryption key on the blockchain. They must register it first.")
-                    continue
-                recipient_keys = {"address": recipient_addr, "encryption_key": recipient_enc_key}
-                tx_obj = Transaction(sender_wallet=node.node_wallet, message=message_text, recipient_public_keys_hex=recipient_keys, tx_type="message")
+                if len(parts) < 3: print("Usage: send_msg <username> <message>"); continue
+                recipient_name, message_text = parts[1], " ".join(parts[2:])
+                recipient_keys = ledger.get_keys_for_user(recipient_name)
+                if not recipient_keys: print(f"Could not find user '{recipient_name}'."); continue
+                print(f"Found user '{recipient_name}'. Creating encrypted message...")
+                tx_obj = Transaction(sender_wallet=node.node_wallet, message=message_text, recipient_public_keys_hex=recipient_keys)
                 tx_dict = tx_obj.to_dict()
                 signature = node.node_wallet.sign_transaction(tx_dict)
                 payload = {'transaction_dict': tx_dict, 'signature_hex': signature.hex()}
                 if node.blockchain.add_transaction(tx_dict, signature.hex()):
                     tx_message = node.create_message("NEW_TRANSACTION", payload)
                     await node.broadcast(tx_message)
+            
             elif cmd == 'mempool':
-                print(f"Node has {len(node.blockchain.pending_transactions)} pending transactions:")
+                print(f"Pending transactions: {len(node.blockchain.pending_transactions)}")
                 print(json.dumps(node.blockchain.pending_transactions, indent=2))
+
             elif cmd == 'mine':
-                if not node.blockchain.pending_transactions:
-                    logging.info('No pending transactions to create a block.')
-                    continue
+                if not node.blockchain.pending_transactions: logging.info('No pending transactions to create a block.'); continue
+                logging.info("--- (TESTING) Bypassing DPoL, this node is the automatic winner. ---")
                 new_block = node.blockchain.mine_block(proposer_address=node.node_wallet.address)
                 if new_block:
                     block_message = node.create_message("NEW_BLOCK", new_block.__dict__)
                     await node.broadcast(block_message)
-            elif cmd == 'peers':
-                logging.info(f"Connected to {len(node.peers)} peers: {list(node.peers.keys())}")
+                    ledger.update_from_chain(node.blockchain)
+
             elif cmd == 'chain':
                 print(json.dumps([b.__dict__ for b in node.blockchain.chain], indent=2, default=str))
             elif cmd == 'exit':
@@ -389,17 +313,18 @@ async def main(args):
 
     server_task.cancel()
     await node.stop()
-    logging.info("Node shut down.")
 
+# This is the entry point when you run "python network/node.py ..."
 if __name__ == "__main__":
+    # Set up command-line argument parsing.
     parser = argparse.ArgumentParser(description="Run a P2P blockchain node.")
-    parser.add_argument('--host', type=str, default='0.0.0.0', help='Host to listen on.')
-    parser.add_argument('--port', type=int, required=True, help='Port to listen on.')
-    parser.add_argument('--peers', type=str, help='Comma-separated list of bootstrap peers (e.g., localhost:8001).')
-    
+    parser.add_argument('--host', type=str, default='0.0.0.0', help="The host address to listen on.")
+    parser.add_argument('--port', type=int, required=True, help="The port to listen on.")
+    parser.add_argument('--peers', type=str, help="A comma-separated list of initial peers to connect to (e.g., localhost:8001,localhost:8002).")
     args = parser.parse_args()
     
     try:
+        # Start the asyncio event loop.
         asyncio.run(main(args))
     except KeyboardInterrupt:
         logging.info("Shutdown requested by user.")

@@ -98,3 +98,32 @@ class Blockchain:
         
         print(f"⛓️ Block #{new_block.index} mined by {proposer_address[:10]}... and added to the chain.")
         return new_block
+    
+    def replace_chain(self, new_chain: list[dict]) -> bool:
+        """
+        Replaces the current chain with a longer, valid chain from a peer.
+        """
+        if len(new_chain) <= len(self.chain):
+            # The incoming chain isn't longer, so we ignore it.
+            return False
+
+        # Validate the new chain to ensure all blocks are correctly linked and hashed.
+        for i in range(1, len(new_chain)):
+            current_block_data = new_chain[i]
+            previous_block_data = new_chain[i-1]
+            
+            # Re-create the Block object to verify its hash integrity.
+            block_to_verify = Block.from_dict(current_block_data)
+            
+            if block_to_verify.hash != block_to_verify.calculate_hash():
+                print(f"Chain validation failed: Block #{block_to_verify.index} has a corrupted hash.")
+                return False
+            
+            if block_to_verify.previous_hash != previous_block_data['hash']:
+                print(f"Chain validation failed: Block #{block_to_verify.index} has a broken link to the previous block.")
+                return False
+        
+        print(f"✅ Incoming chain is valid. Replacing local chain of length {len(self.chain)} with new chain of length {len(new_chain)}.")
+        # Reconstruct the chain with proper Block objects.
+        self.chain = [Block.from_dict(block_data) for block_data in new_chain]
+        return True
