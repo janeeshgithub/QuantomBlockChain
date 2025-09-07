@@ -9,6 +9,7 @@ script_dir = os.path.dirname(__file__)
 parent_dir = os.path.join(script_dir, '..')
 sys.path.append(parent_dir)
 # ----------------------------------------------------------------------
+print("\n\n>>>> DEBUG: DPOL SCRIPT V2 LOADED SUCCESSFULLY <<<<\n\n") 
 
 from core.block import Block
 from core.wallet import Wallet
@@ -48,30 +49,42 @@ class DPoLConsensus:
         """
         return proof
 
+    # In consensus/dpol.py, replace the entire select_delegates function
+
     def select_delegates(self, previous_block_hash: str) -> list[str]:
         """
         Runs the fair lottery to select the delegate committee for the round.
-
-        Args:
-            previous_block_hash (str): The hash of the latest block in the chain.
-
-        Returns:
-            list: A sorted list of delegate addresses, with the primary at index 0.
         """
         print("\n--- Starting Delegate Election ---")
         node_scores = {}
 
-        # 1. All nodes generate and "broadcast" their VRF values
+        # 1. All nodes generate their VRF values
         for node in self.all_nodes:
             random_value, proof = self._simulate_ivrf_generation(node.address, previous_block_hash)
             
-            # 2. Each node verifies the values and calculates scores
+            # 2. Verify values and calculate scores
             if self._simulate_ivrf_verification(proof):
-                # Score is the absolute difference between the random value and the hash
-                score = abs(int(previous_block_hash, 16) - int(random_value, 16))
-                node_scores[node.address] = score
+                
+                # --- START DEBUGGING BLOCK ---
+                try:
+                    # Print the values we are about to use
+                    print(f"DEBUG: prev_hash type: {type(previous_block_hash)}, value: {previous_block_hash[:10]}...")
+                    print(f"DEBUG: random_value type: {type(random_value)}, value: {random_value[:10]}...")
+
+                    # This is the line that is likely failing
+                    score = abs(int(previous_block_hash, 16) - int(random_value, 16))
+                    node_scores[node.address] = score
+
+                except (ValueError, TypeError) as e:
+                    # If the int() conversion fails, this will catch it and tell us why
+                    print(f"\n--- DEBUG ERROR ---")
+                    print(f"Failed to calculate score for node {node.address[:10]}...")
+                    print(f"Error was: {e}")
+                    print(f"The 'previous_block_hash' that caused the error was: {previous_block_hash}")
+                    print(f"--- END DEBUG ERROR ---\n")
+                # --- END DEBUGGING BLOCK ---
         
-        # 3. Sort nodes by score to find the "luckiest" ones
+        # 3. Sort nodes by score
         if not node_scores:
             print("Error: No scores were calculated. Cannot select delegates.")
             return []
@@ -79,6 +92,10 @@ class DPoLConsensus:
         sorted_addresses = sorted(node_scores.keys(), key=lambda addr: node_scores[addr])
         
         delegates = sorted_addresses[:self.num_delegates]
+        if not delegates:
+            print("Error: No delegates could be selected from scores.")
+            return []
+
         print(f"--- Election Complete. Primary Delegate: {delegates[0][:10]}...")
         return delegates
 
