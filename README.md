@@ -1,11 +1,11 @@
 
-## 🎯 The Problem
+## The Problem
 
 Current blockchain-based communication platforms depend on cryptographic algorithms like RSA and ECDSA, which are vulnerable to attacks from quantum computers. The development of quantum computing creates a significant risk of message theft, forgeries, and the loss of communication privacy.
 
 There is an urgent need for a real-world, scalable, and user-friendly public blockchain System that ensures secure, end-to-end encrypted messaging in the post-quantum era.
 
-## 🚀 Motivation
+## Motivation
 
 > Blockchain's promise of permanent security is on a collision course with the reality of quantum computing.
 
@@ -13,14 +13,14 @@ The cryptographic signatures (ECDSA) that protect major cryptocurrencies are vul
 
 The threat is immediate due to **"Harvest Now, Decrypt Later"** strategies, where adversaries store today's encrypted data to decrypt it in the future with quantum computers. In response, governments are setting urgent deadlines for migrating to Post-Quantum Cryptography (PQC), yet enterprise adoption remains dangerously low.
 
-## ✨ Key Features
+## Key Features
 
 - **Quantum-Resistant by Design:** Uses NIST-standardized PQC primitives (`CRYSTALS-Kyber` and `CRYSTALS-Dilithium`) for all cryptographic operations.
 - **Secure End-to-End Messaging:** Every message is treated as a fully encrypted and authenticated blockchain transaction.
 - **Novel Consensus Mechanism:** Implements **Delegated Proof of Luck (DPoL)**, a fair and energy-efficient alternative to PoW and PoS.
 - **Built with Python:** Developed in Python for its extensive cryptographic libraries and rapid prototyping capabilities.
 
-## 🛠️ Technical Architecture
+## Technical Architecture
 
 ### Core Cryptography
 
@@ -36,15 +36,7 @@ The network uses a novel **Delegated Proof of Luck (DPoL)** consensus mechanism.
 1.  **Delegation:** Token holders elect a small set of trusted delegates to run nodes and produce blocks, inspired by Delegated Proof of Stake (DPoS).
 2.  **Luck-Based Selection:** For each block, a producer is chosen from the delegate pool via a cryptographically secure lottery using a **Verifiable Random Function (VRF)**. This "Proof of Luck" ensures fairness and prevents resource-based centralization.
 
-## 📊 System Architecture Diagram
-
-_(A block diagram illustrating the System's architecture would go here.)_
-
-```
-[ Placeholder for path/to/your/block_diagram.png ]
-```
-
-## 📈 Evaluation Plan
+## Evaluation Plan
 
 The System will be rigorously evaluated for both performance and security.
 
@@ -65,7 +57,7 @@ A theoretical analysis will be conducted to validate security claims:
 
 
 
-## 📚 References
+## References
 
 This project builds upon the foundational research in Post-Quantum Cryptography and blockchain consensus. Key papers and resources include:
 
