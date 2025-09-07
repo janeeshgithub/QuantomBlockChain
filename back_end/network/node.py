@@ -374,7 +374,6 @@ async def main(args):
                 if not node.blockchain.pending_transactions:
                     logging.info('No pending transactions to create a block.')
                     continue
-                logging.info("--- (TESTING) Bypassing DPoL, this node is the automatic winner. ---")
                 new_block = node.blockchain.mine_block(proposer_address=node.node_wallet.address)
                 if new_block:
                     block_message = node.create_message("NEW_BLOCK", new_block.__dict__)
