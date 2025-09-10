@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Qubi - Blockchain Node Interface</title>
+    <style>
+        :root {
+            --bg-color: #111827;
+            --card-color: #1f2937;
+            --text-color: #e5e7eb;
+            --gray-color: #9ca3af;
+            --accent-color: #38bdf8;
+            --accent-hover: #0ea5e9;
+            --green-color: #4ade80;
+            --red-color: #f87171;
+            --border-color: #374151;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            width: 100%;
+        }
+        h1, h2 {
+            color: var(--accent-color);
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 0.5rem;
+        }
+        .card {
+            background-color: var(--card-color);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+        .status-bar { display: flex; align-items: center; gap: 1rem; }
+        .status-light { width: 12px; height: 12px; border-radius: 50%; background-color: var(--gray-color); }
+        .status-light.connected { background-color: var(--green-color); }
+        .status-light.disconnected { background-color: var(--red-color); }
+        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; }
+        .form-group { display: flex; flex-direction: column; gap: 0.5rem; }
+        label { font-weight: 500; color: var(--gray-color); }
+        input {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            padding: 0.75rem;
+            font-size: 1rem;
+        }
+        button {
+            background-color: var(--accent-color);
+            color: var(--bg-color);
+            border: none;
+            border-radius: 4px;
+            padding: 0.75rem 1rem;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        button:hover { background-color: var(--accent-hover); }
+        .button-group { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-top: 1rem; }
+        #log, #message-box {
+            background-color: #000;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            padding: 1rem;
+            height: 300px;
+            overflow-y: auto;
+            font-family: 'Courier New', Courier, monospace;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        .log-entry { margin-bottom: 0.5em; }
+        .log-info { color: var(--gray-color); }
+        .log-success { color: var(--green-color); }
+        .log-error { color: var(--red-color); }
+        .log-message { color: var(--accent-color); font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>Qubi Node Interface</h1>
+
+        <div class="card status-bar">
+            <div id="status-light" class="status-light"></div>
+            <span id="status-text">Connecting...</span>
+            <div style="margin-left: auto;"><strong>Your Address:</strong> <span id="node-address">...</span></div>
+        </div>
+
+        <div class="card">
+            <h2>Actions</h2>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="reg-username">Username to Register</label>
+                    <input type="text" id="reg-username" placeholder="e.g., alice">
+                    <button id="btn-register">Register Key</button>
+                </div>
+                <div class="form-group">
+                    <label for="send-recipient">Recipient Username</label>
+                    <input type="text" id="send-recipient" placeholder="e.g., bob">
+                    <label for="send-message">Message</label>
+                    <input type="text" id="send-message" placeholder="Your secret message">
+                    <button id="btn-send">Send Message</button>
+                </div>
+            </div>
+            <div class="button-group">
+                <button id="btn-mine">Mine Block</button>
+                <button id="btn-users">List Users</button>
+                <button id="btn-mempool">Show Mempool</button>
+                <button id="btn-chain">Show Chain</button>
+            </div>
+        </div>
+        
+        <div class="card">
+            <h2>New Messages</h2>
+            <div id="message-box"></div>
+        </div>
+
+        <div class="card">
+            <h2>Logs & Responses</h2>
+            <div id="log"></div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const statusLight = document.getElementById('status-light');
+            const statusText = document.getElementById('status-text');
+            const nodeAddress = document.getElementById('node-address');
+            const logDiv = document.getElementById('log');
+            const messageBox = document.getElementById('message-box');
+
+            const ws = new WebSocket('ws://localhost:8080/ws');
+
+            function log(message, type = 'info') {
+                const entry = document.createElement('div');
+                entry.className = `log-entry log-${type}`;
+                entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+                logDiv.appendChild(entry);
+                logDiv.scrollTop = logDiv.scrollHeight;
+            }
+
+            ws.onopen = () => {
+                statusLight.className = 'status-light connected';
+                statusText.textContent = 'Connected';
+                log('WebSocket connection established.', 'success');
+            };
+
+            ws.onclose = () => {
+                statusLight.className = 'status-light disconnected';
+                statusText.textContent = 'Disconnected';
+                log('WebSocket connection closed.', 'error');
+            };
+
+            ws.onerror = (error) => {
+                log(`WebSocket error: ${error.message}`, 'error');
+            };
+
+            ws.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+
+                // Handle pushes from the server (not direct responses to commands)
+                if (data.type === 'init') {
+                    nodeAddress.textContent = data.address;
+                    log(`Node initialized. Address: ${data.address}`);
+                    log(`Known users: ${data.users.join(', ')}`);
+                } else if (data.type === 'log') {
+                    log(`[NODE] ${data.message}`);
+                } else if (data.type === 'new_message') {
+                    const msgEntry = document.createElement('div');
+                    msgEntry.className = 'log-entry log-message';
+                    msgEntry.textContent = `From ${data.from}: "${data.content}"`;
+                    messageBox.appendChild(msgEntry);
+                }
+                
+                // Handle direct responses to our commands
+                if (data.status === 'success') {
+                    log(`SUCCESS: ${data.message || 'Command executed.'}`, 'success');
+                    if (data.type && data.data) {
+                       log(JSON.stringify(data.data, null, 2));
+                    }
+                } else if (data.status === 'error') {
+                    log(`ERROR: ${data.message}`, 'error');
+                } else if (data.status === 'info') {
+                    log(`INFO: ${data.message}`, 'info');
+                }
+            };
+            
+            function sendCommand(command, payload = {}) {
+                if (ws.readyState !== WebSocket.OPEN) {
+                    log('Cannot send command. WebSocket is not open.', 'error');
+                    return;
+                }
+                const message = { command, ...payload };
+                ws.send(JSON.stringify(message));
+            }
+
+            // --- Button Event Listeners ---
+            document.getElementById('btn-register').onclick = () => {
+                const username = document.getElementById('reg-username').value;
+                if (username) sendCommand('register_key', { username });
+            };
+
+            document.getElementById('btn-send').onclick = () => {
+                const recipient = document.getElementById('send-recipient').value;
+                const message = document.getElementById('send-message').value;
+                if (recipient && message) sendCommand('send_msg', { recipient, message });
+            };
+
+            document.getElementById('btn-mine').onclick = () => sendCommand('mine');
+            document.getElementById('btn-users').onclick = () => sendCommand('get_users');
+            document.getElementById('btn-mempool').onclick = () => sendCommand('get_mempool');
+            document.getElementById('btn-chain').onclick = () => sendCommand('get_chain');
+        });
+    </script>
+</body>
+</html>

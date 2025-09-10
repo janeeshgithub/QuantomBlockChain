@@ -28,11 +28,6 @@ from core.transaction import Transaction
 # Configures a logger to print timestamped informational messages to the console.
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-
-# In network/node.py
-
-# In network/node.py
-
 class P2PNode:
     """
     Manages all peer-to-peer network operations for a single blockchain node.
@@ -224,7 +219,6 @@ async def main(args):
         try:
             cmd = await asyncio.to_thread(input, "\nCommands: users, register_key <user>, send_msg <user> <msg>, read_msgs, mempool, mine, chain, exit\n> ")
             
-            # --- START OF CORRECTED BLOCK ---
             if cmd == 'read_msgs':
                 print("\n--- Manually checking blockchain for your messages ---")
                 my_address = node.node_wallet.address
@@ -259,7 +253,6 @@ async def main(args):
                 # After checking all blocks, if we haven't found any messages, say so.
                 if messages_found == 0:
                     print("No messages found for you on the blockchain.")
-            # --- END OF CORRECTED BLOCK ---
 
             elif cmd == 'users':
                 print(f"Registered Users: {ledger.list_users()}")
@@ -297,7 +290,6 @@ async def main(args):
 
             elif cmd == 'mine':
                 if not node.blockchain.pending_transactions: logging.info('No pending transactions to create a block.'); continue
-                logging.info("--- (TESTING) Bypassing DPoL, this node is the automatic winner. ---")
                 new_block = node.blockchain.mine_block(proposer_address=node.node_wallet.address)
                 if new_block:
                     block_message = node.create_message("NEW_BLOCK", new_block.__dict__)
